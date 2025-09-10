@@ -28,19 +28,12 @@ Mit dem **iOS-WLAN-Profile-Generator** wird ein `.mobileconfig`-Profil erstellt:
 - 💾 **Export** als `.mobileconfig`
 - 🌍 **Sprachumschaltung**: DE / EN
 
+
+
 ---
-
-### 🚀 Installation
-
-#### Variante A: Python (für Entwickler)
-```bash
-git clone https://github.com/<user>/ios-wlan-profile-generator.git
-cd ios-wlan-profile-generator
-python iOS-WLAN-Profile-Generator.py
-
-
-
-
+---
+---
+---
 
 
 
@@ -73,11 +66,5 @@ With the **iOS-WLAN-Profile-Generator**, a `.mobileconfig` profile can be create
 - 🌍 **Language switch**: DE / EN
 
 ---
-
-## 🚀 Installation
-
-### Option A: Python (for developers)
-```bash
-git clone https://github.com/<user>/ios-wlan-profile-generator.git
 cd ios-wlan-profile-generator
 python iOS-WLAN-Profile-Generator.py
