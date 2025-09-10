@@ -1,0 +1,3 @@
+# Requirements for iOS-WLAN-Profile-Generator
+# Standardbibliothek reicht aus (tkinter, uuid, plistlib).
+# Keine externen Pakete notwendig.
