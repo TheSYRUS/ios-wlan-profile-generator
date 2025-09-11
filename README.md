@@ -23,7 +23,6 @@ Mit dem **iOS-WLAN-Profile-Generator** wird ein `.mobileconfig`-Profil erstellt:
 - 🌐 **SSID / Passwort Eingabe**
 - ⚙️ **Optionen**: AutoJoin, Hidden, Private-WLAN-Adresse ausschalten, IP-Tracking nicht beschränken
 - 🛠️ **DNS & Proxy Konfiguration**
-- 📋 **Mehrere Netzwerke in einem Profil**
 - 👀 **XML-Vorschau** des generierten `.mobileconfig`
 - 💾 **Export** als `.mobileconfig`
 - 🌍 **Sprachumschaltung**: DE / EN
@@ -60,7 +59,6 @@ With the **iOS-WLAN-Profile-Generator**, a `.mobileconfig` profile can be create
 - 🌐 **SSID / Password input**
 - ⚙️ **Options**: AutoJoin, Hidden, Disable Private Wi-Fi Address, Do not restrict IP tracking
 - 🛠️ **DNS & Proxy configuration**
-- 📋 **Multiple networks in a single profile**
 - 👀 **XML preview** of the generated `.mobileconfig`
 - 💾 **Export** as `.mobileconfig`
 - 🌍 **Language switch**: DE / EN
