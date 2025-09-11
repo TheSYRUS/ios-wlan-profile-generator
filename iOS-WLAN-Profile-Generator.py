@@ -1,329 +1,321 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-iOS-WLAN-Profile-Generator
-Ein einfacher Windows-GUI-Generator (Tkinter) um iOS .mobileconfig WLAN-Profile zu erzeugen.
-Jetzt mit Sprach-Switch (DE/EN) direkt in der App.
+iOS-WLAN-Profile-Generator (Single-SSID, Modern Layout)
+Tkinter GUI to build iOS `.mobileconfig` Wi-Fi profiles (DE/EN).
 """
 
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
-import uuid
-import plistlib
+import uuid, plistlib
 
-# ------------------ Sprach-Strings ------------------
+# ------------------ Translations ------------------
 STRINGS = {
     "de": {
         "title": "iOS-WLAN-Profile-Generator",
-        "form_title": "WLAN-Einstellungen (Netzwerk hinzufügen)",
-        "ssid": "SSID:",
-        "password": "Passwort:",
-        "autojoin": "Automatisch verbinden (AutoJoin)",
-        "hidden": "Verstecktes WLAN",
-        "disable_mac": "Private WLAN-Adresse ausschalten",
-        "disable_privateaddr": "IP-Tracking nicht beschränken",
-        "enc": "Verschlüsselung:",
-        "dns": "DNS-Server (Komma getrennt):",
-        "proxy": "Proxy:",
-        "proxy_val": "PAC URL oder Host:Port:",
-        "btn_add": "Netzwerk zur Liste hinzufügen",
-        "btn_reset": "Form zurücksetzen",
-        "list_title": "Netzwerk-Liste (wird in Profil eingebunden)",
-        "btn_remove": "Entfernen",
-        "btn_edit": "Bearbeiten",
-        "btn_preview": "Vorschau erzeugen",
-        "profile_name": "Profil-Name:",
-        "btn_save": "Speichern (.mobileconfig)"
+        "lang": "Sprache:",
+        "section_input": "📶 Netzwerkeingabe",
+        "section_opts": "⚙️ Optionen",
+        "section_export": "📤 Export",
+        "footer": "ℹ️ Profile müssen manuell auf iOS importiert werden. Automatische Ferninstallation nur via MDM.",
+        "ssid": "📶 SSID",
+        "password": "🔑 Passwort",
+        "enc": "🔐 Verschlüsselung",
+        "dns": "🌐 DNS-Server (Komma)",
+        "proxy_mode": "🌍 Proxy",
+        "proxy_val": "🔗 PAC URL / Host:Port",
+        "autojoin": "✅ Automatisch verbinden",
+        "hidden": "👁️ Verstecktes WLAN",
+        "disable_mac": "🛡️ MAC Random AUS",
+        "disable_priv": "🔒 Private Adresse AUS",
+        "profile_name": "📝 Profil-Name",
+        "removal_pw": "🔑 Entfernen-Passwort",
+        "reset": "♻️ Formular zurücksetzen",
+        "preview": "👀 Vorschau",
+        "save": "💾 Speichern (.mobileconfig)",
+        "show_pw": "👁️",
+        "err_ssid_empty": "SSID darf nicht leer sein.",
+        "saved_prefix": "Datei gespeichert: ",
+        "preview_title": "Vorschau (.mobileconfig XML)"
     },
     "en": {
         "title": "iOS Wi-Fi Profile Generator",
-        "form_title": "Wi-Fi Settings (Add Network)",
-        "ssid": "SSID:",
-        "password": "Password:",
-        "autojoin": "Auto-Join",
-        "hidden": "Hidden Network",
-        "disable_mac": "Disable Private Wi-Fi Address",
-        "disable_privateaddr": "Do not restrict IP tracking",
-        "enc": "Encryption:",
-        "dns": "DNS servers (comma separated):",
-        "proxy": "Proxy:",
-        "proxy_val": "PAC URL or Host:Port:",
-        "btn_add": "Add Network",
-        "btn_reset": "Reset Form",
-        "list_title": "Network List (to be included in profile)",
-        "btn_remove": "Remove",
-        "btn_edit": "Edit",
-        "btn_preview": "Preview",
-        "profile_name": "Profile Name:",
-        "btn_save": "Save (.mobileconfig)"
+        "lang": "Language:",
+        "section_input": "📶 Network Input",
+        "section_opts": "⚙️ Options",
+        "section_export": "📤 Export",
+        "footer": "ℹ️ Profiles must be installed manually on iOS. Remote auto-install requires MDM.",
+        "ssid": "📶 SSID",
+        "password": "🔑 Password",
+        "enc": "🔐 Encryption",
+        "dns": "🌐 DNS servers (comma)",
+        "proxy_mode": "🌍 Proxy",
+        "proxy_val": "🔗 PAC URL / Host:Port",
+        "autojoin": "✅ Auto-Join",
+        "hidden": "👁️ Hidden Network",
+        "disable_mac": "🛡️ Disable MAC Randomization",
+        "disable_priv": "🔒 Disable Private Address",
+        "profile_name": "📝 Profile Name",
+        "removal_pw": "🔑 Removal Password",
+        "reset": "♻️ Reset Form",
+        "preview": "👀 Preview",
+        "save": "💾 Save (.mobileconfig)",
+        "show_pw": "👁️",
+        "err_ssid_empty": "SSID must not be empty.",
+        "saved_prefix": "File saved: ",
+        "preview_title": "Preview (.mobileconfig XML)"
     }
 }
 LANG = "de"
 def t(key): return STRINGS[LANG][key]
 
-# ------------------ Hilfsfunktionen ------------------
+# ------------------ Builders ------------------
 def make_wifi_dict(ssid, password, auto_join, hidden, encryption="WPA2",
                    disable_mac_random=False, disable_private_addr=False,
-                   proxy_type=None, proxy_url=None, dns_servers=None):
+                   proxy_type="none", proxy_val="", dns_servers=None):
     d = {
-        "AutoJoin": auto_join,
+        "AutoJoin": bool(auto_join),
         "EncryptionType": encryption,
-        "HIDDEN_NETWORK": hidden,
+        "HIDDEN_NETWORK": bool(hidden),
         "Password": password,
-        "PayloadDescription": f"WLAN Konfiguration für {ssid}",
+        "PayloadDescription": f"WLAN für {ssid}",
         "PayloadDisplayName": f"{ssid} WLAN",
         "PayloadIdentifier": f"com.{ssid.lower()}.wifi",
         "PayloadType": "com.apple.wifi.managed",
         "PayloadUUID": str(uuid.uuid4()).upper(),
         "PayloadVersion": 1,
-        "SSID_STR": ssid
+        "SSID_STR": ssid,
+        "DisableAssociationMACRandomization": bool(disable_mac_random),
+        "DisablePrivateAddress": bool(disable_private_addr)
     }
-    if disable_mac_random:
-        d["DisableAssociationMACRandomization"] = True
-    if disable_private_addr:
-        d["DisablePrivateAddress"] = True
-    if proxy_type and proxy_type != "none":
-        if proxy_type == "pac" and proxy_url:
-            d["ProxyPACURL"] = proxy_url
-            d["ProxyType"] = "Auto"
-        elif proxy_type == "manual" and proxy_url:
-            hostport = proxy_url.split(":", 1)
-            if len(hostport) == 2:
-                d["HTTPProxy"] = {
-                    "HTTPEnable": 1,
-                    "HTTPProxy": hostport[0],
-                    "HTTPPort": int(hostport[1])
-                }
-                d["ProxyType"] = "Manual"
     if dns_servers:
         d["DNSServer"] = dns_servers
+    if proxy_type == "pac" and proxy_val:
+        d["ProxyPACURL"] = proxy_val
+        d["ProxyType"] = "Auto"
+    elif proxy_type == "manual" and proxy_val and ":" in proxy_val:
+        host, port = proxy_val.split(":", 1)
+        try:
+            d["HTTPProxy"] = {"HTTPEnable": 1, "HTTPProxy": host, "HTTPPort": int(port)}
+            d["ProxyType"] = "Manual"
+        except ValueError:
+            pass
     return d
 
-def build_mobileconfig(networks, profile_name="WLAN Profil"):
+def build_mobileconfig(network, profile_name, removal_pw=None):
     top = {
-        "PayloadContent": networks,
-        "PayloadDisplayName": profile_name,
-        "PayloadIdentifier": f"com.generated.wifi.profile.{uuid.uuid4().hex[:8]}",
+        "PayloadContent": [network],
+        "PayloadDisplayName": profile_name or "WLAN Profil",
+        "PayloadIdentifier": f"com.generated.wifi.{uuid.uuid4().hex[:8]}",
         "PayloadRemovalDisallowed": False,
         "PayloadType": "Configuration",
         "PayloadUUID": str(uuid.uuid4()).upper(),
         "PayloadVersion": 1
     }
+    if removal_pw:
+        top["RemovalPassword"] = removal_pw
     return top
 
-# ------------------ GUI ------------------
-class MobileConfigApp(tk.Tk):
+# ------------------ GUI App ------------------
+class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(t("title"))
-        self.geometry("780x520")
-        self.resizable(True, True)
+        self.geometry("900x600")
 
-        # Sprachwahl Dropdown
+        style = ttk.Style()
+        try: style.theme_use("clam")
+        except: pass
+        style.configure("TButton", font=("Segoe UI", 11), padding=8)
+        style.configure("TLabel", font=("Segoe UI", 11))
+        style.configure("TCheckbutton", font=("Segoe UI", 11))
+
+        # Header
+        header = ttk.Frame(self, padding=(12, 10))
+        header.pack(fill="x")
+        self.title_lbl = ttk.Label(header, text=t("title"), font=("Segoe UI", 16, "bold"))
+        self.title_lbl.pack(side="left")
+        self.lang_lbl = ttk.Label(header, text=t("lang"))
+        self.lang_lbl.pack(side="right", padx=(0, 6))
         self.lang_var = tk.StringVar(value=LANG)
-        lang_menu = ttk.OptionMenu(self, self.lang_var, LANG, "de", "en", command=self.set_lang)
-        lang_menu.pack(anchor="ne", padx=10, pady=5)
+        ttk.OptionMenu(header, self.lang_var, LANG, "de", "en", command=self.set_lang).pack(side="right")
 
-        # Left: form
-        self.frm = ttk.LabelFrame(self, text=t("form_title"))
-        self.frm.pack(fill="both", expand=False, padx=10, pady=8)
+        # Input
+        self.frm_input = ttk.LabelFrame(self, text=t("section_input"), padding=12)
+        self.frm_input.pack(fill="x", padx=10, pady=8)
 
-        row = 0
-        self.lbl_ssid = ttk.Label(self.frm, text=t("ssid"))
-        self.lbl_ssid.grid(row=row, column=0, sticky="e", padx=4, pady=4)
-        self.ssid_var = tk.StringVar(value="")
-        ttk.Entry(self.frm, textvariable=self.ssid_var, width=30).grid(row=row, column=1, sticky="w", padx=4, pady=4)
+        r = 0
+        self.lbl_ssid = ttk.Label(self.frm_input, text=t("ssid"))
+        self.lbl_ssid.grid(row=r, column=0, sticky="e", padx=6, pady=6)
+        self.ssid_var = tk.StringVar()
+        self.ent_ssid = ttk.Entry(self.frm_input, textvariable=self.ssid_var, width=32)
+        self.ent_ssid.grid(row=r, column=1, sticky="w", padx=6, pady=6)
 
-        self.lbl_pw = ttk.Label(self.frm, text=t("password"))
-        self.lbl_pw.grid(row=row, column=2, sticky="e", padx=4, pady=4)
-        self.pw_var = tk.StringVar(value="")
-        ttk.Entry(self.frm, textvariable=self.pw_var, width=30, show="*").grid(row=row, column=3, sticky="w", padx=4, pady=4)
-        row += 1
+        self.lbl_password = ttk.Label(self.frm_input, text=t("password"))
+        self.lbl_password.grid(row=r, column=2, sticky="e", padx=6, pady=6)
+        self.pw_var = tk.StringVar()
+        self.ent_pw = ttk.Entry(self.frm_input, textvariable=self.pw_var, show="*", width=32)
+        self.ent_pw.grid(row=r, column=3, sticky="w", padx=6, pady=6)
+        self.btn_pw_toggle = ttk.Button(self.frm_input, text=t("show_pw"), width=3, command=self.toggle_pw)
+        self.btn_pw_toggle.grid(row=r, column=4, sticky="w")
 
-        self.chk_autojoin = ttk.Checkbutton(self.frm, text=t("autojoin"))
-        self.autojoin_var = tk.BooleanVar(value=True)
-        self.chk_autojoin.config(variable=self.autojoin_var)
-        self.chk_autojoin.grid(row=row, column=0, columnspan=2, sticky="w", padx=4, pady=4)
-
-        self.chk_hidden = ttk.Checkbutton(self.frm, text=t("hidden"))
-        self.hidden_var = tk.BooleanVar(value=False)
-        self.chk_hidden.config(variable=self.hidden_var)
-        self.chk_hidden.grid(row=row, column=2, columnspan=2, sticky="w", padx=4, pady=4)
-        row += 1
-
-        self.chk_disable_mac = ttk.Checkbutton(self.frm, text=t("disable_mac"))
-        self.disable_mac_var = tk.BooleanVar(value=True)
-        self.chk_disable_mac.config(variable=self.disable_mac_var)
-        self.chk_disable_mac.grid(row=row, column=0, columnspan=2, sticky="w", padx=4, pady=4)
-
-        self.chk_disable_priv = ttk.Checkbutton(self.frm, text=t("disable_privateaddr"))
-        self.disable_privateaddr_var = tk.BooleanVar(value=True)
-        self.chk_disable_priv.config(variable=self.disable_privateaddr_var)
-        self.chk_disable_priv.grid(row=row, column=2, columnspan=2, sticky="w", padx=4, pady=4)
-        row += 1
-
-        self.lbl_enc = ttk.Label(self.frm, text=t("enc"))
-        self.lbl_enc.grid(row=row, column=0, sticky="e", padx=4, pady=4)
+        r += 1
+        self.lbl_enc = ttk.Label(self.frm_input, text=t("enc"))
+        self.lbl_enc.grid(row=r, column=0, sticky="e", padx=6, pady=6)
         self.enc_var = tk.StringVar(value="WPA2")
-        ttk.Combobox(self.frm, textvariable=self.enc_var, values=["WPA2", "WPA3", "WEP", "None"], width=12).grid(row=row, column=1, sticky="w", padx=4, pady=4)
+        self.cmb_enc = ttk.Combobox(self.frm_input, textvariable=self.enc_var,
+                                    values=["WPA2", "WPA3", "WEP", "None"], width=14, state="readonly")
+        self.cmb_enc.grid(row=r, column=1, sticky="w", padx=6, pady=6)
 
-        self.lbl_dns = ttk.Label(self.frm, text=t("dns"))
-        self.lbl_dns.grid(row=row, column=2, sticky="e", padx=4, pady=4)
-        self.dns_var = tk.StringVar(value="")
-        ttk.Entry(self.frm, textvariable=self.dns_var, width=30).grid(row=row, column=3, sticky="w", padx=4, pady=4)
-        row += 1
+        self.lbl_dns = ttk.Label(self.frm_input, text=t("dns"))
+        self.lbl_dns.grid(row=r, column=2, sticky="e", padx=6, pady=6)
+        self.dns_var = tk.StringVar()
+        self.ent_dns = ttk.Entry(self.frm_input, textvariable=self.dns_var, width=32)
+        self.ent_dns.grid(row=r, column=3, sticky="w", padx=6, pady=6)
 
-        self.lbl_proxy = ttk.Label(self.frm, text=t("proxy"))
-        self.lbl_proxy.grid(row=row, column=0, sticky="e", padx=4, pady=4)
-        self.proxy_type_var = tk.StringVar(value="none")
-        ttk.Combobox(self.frm, textvariable=self.proxy_type_var, values=["none", "pac", "manual"], width=12).grid(row=row, column=1, sticky="w", padx=4, pady=4)
-        self.lbl_proxy_val = ttk.Label(self.frm, text=t("proxy_val"))
-        self.lbl_proxy_val.grid(row=row, column=2, sticky="e", padx=4, pady=4)
-        self.proxy_val_var = tk.StringVar(value="")
-        ttk.Entry(self.frm, textvariable=self.proxy_val_var, width=30).grid(row=row, column=3, sticky="w", padx=4, pady=4)
-        row += 1
+        r += 1
+        self.lbl_proxy_mode = ttk.Label(self.frm_input, text=t("proxy_mode"))
+        self.lbl_proxy_mode.grid(row=r, column=0, sticky="e", padx=6, pady=6)
+        self.proxy_mode = tk.StringVar(value="none")
+        self.cmb_proxy = ttk.Combobox(self.frm_input, textvariable=self.proxy_mode,
+                                      values=["none", "pac", "manual"], width=14, state="readonly")
+        self.cmb_proxy.grid(row=r, column=1, sticky="w", padx=6, pady=6)
 
-        # Buttons
-        self.btn_add = ttk.Button(self.frm, text=t("btn_add"), command=self.add_network)
-        self.btn_add.grid(row=row, column=0, padx=4, pady=4)
-        self.btn_reset = ttk.Button(self.frm, text=t("btn_reset"), command=self.reset_form)
-        self.btn_reset.grid(row=row, column=1, padx=4, pady=4)
+        self.lbl_proxy_val = ttk.Label(self.frm_input, text=t("proxy_val"))
+        self.lbl_proxy_val.grid(row=r, column=2, sticky="e", padx=6, pady=6)
+        self.proxy_val = tk.StringVar()
+        self.ent_proxy_val = ttk.Entry(self.frm_input, textvariable=self.proxy_val, width=32)
+        self.ent_proxy_val.grid(row=r, column=3, sticky="w", padx=6, pady=6)
 
-        # Right: list
-        self.list_frame = ttk.LabelFrame(self, text=t("list_title"))
-        self.list_frame.pack(fill="both", expand=True, padx=10, pady=8)
-        self.networks = []
-        self.listbox = tk.Listbox(self.list_frame, height=8)
-        self.listbox.pack(fill="both", side="left", expand=True, padx=4, pady=4)
-        sb = ttk.Scrollbar(self.list_frame, command=self.listbox.yview)
-        sb.pack(side="left", fill="y")
-        self.listbox.config(yscrollcommand=sb.set)
+        # Options
+        self.opt = ttk.LabelFrame(self, text=t("section_opts"), padding=12)
+        self.opt.pack(fill="x", padx=10, pady=8)
+        self.autojoin_var = tk.BooleanVar(value=True)
+        self.chk_autojoin = ttk.Checkbutton(self.opt, text=t("autojoin"), variable=self.autojoin_var)
+        self.chk_autojoin.grid(row=0, column=0, sticky="w", padx=6, pady=6)
+        self.hidden_var = tk.BooleanVar(value=False)
+        self.chk_hidden = ttk.Checkbutton(self.opt, text=t("hidden"), variable=self.hidden_var)
+        self.chk_hidden.grid(row=0, column=1, sticky="w", padx=6, pady=6)
+        self.disable_mac_var = tk.BooleanVar(value=True)
+        self.chk_disable_mac = ttk.Checkbutton(self.opt, text=t("disable_mac"), variable=self.disable_mac_var)
+        self.chk_disable_mac.grid(row=1, column=0, sticky="w", padx=6, pady=6)
+        self.disable_priv_var = tk.BooleanVar(value=True)
+        self.chk_disable_priv = ttk.Checkbutton(self.opt, text=t("disable_priv"), variable=self.disable_priv_var)
+        self.chk_disable_priv.grid(row=1, column=1, sticky="w", padx=6, pady=6)
 
-        right_buttons = ttk.Frame(self.list_frame)
-        right_buttons.pack(side="left", fill="y", padx=6)
-        self.btn_remove = ttk.Button(right_buttons, text=t("btn_remove"), command=self.remove_selected)
-        self.btn_remove.pack(fill="x", pady=4)
-        self.btn_edit = ttk.Button(right_buttons, text=t("btn_edit"), command=self.edit_selected)
-        self.btn_edit.pack(fill="x", pady=4)
-        self.btn_preview = ttk.Button(right_buttons, text=t("btn_preview"), command=self.preview_mobileconfig)
-        self.btn_preview.pack(fill="x", pady=4)
+        # Export
+        self.exp = ttk.LabelFrame(self, text=t("section_export"), padding=12)
+        self.exp.pack(fill="x", padx=10, pady=8)
+        self.lbl_profile_name = ttk.Label(self.exp, text=t("profile_name"))
+        self.lbl_profile_name.grid(row=0, column=0, sticky="e", padx=6, pady=6)
+        self.profile_name_var = tk.StringVar()
+        self.ent_profile = ttk.Entry(self.exp, textvariable=self.profile_name_var, width=30)
+        self.ent_profile.grid(row=0, column=1, sticky="w", padx=6, pady=6)
 
-        # Bottom
-        bottom = ttk.Frame(self)
-        bottom.pack(fill="x", expand=False, padx=10, pady=8)
-        self.lbl_profile_name = ttk.Label(bottom, text=t("profile_name"))
-        self.lbl_profile_name.pack(side="left", padx=4)
-        self.profile_name_var = tk.StringVar(value="")
-        ttk.Entry(bottom, textvariable=self.profile_name_var, width=30).pack(side="left", padx=4)
-        self.btn_save = ttk.Button(bottom, text=t("btn_save"), command=self.save_mobileconfig)
-        self.btn_save.pack(side="right", padx=4)
+        self.lbl_removal_pw = ttk.Label(self.exp, text=t("removal_pw"))
+        self.lbl_removal_pw.grid(row=0, column=2, sticky="e", padx=6, pady=6)
+        self.removal_pw_var = tk.StringVar()
+        self.ent_removal_pw = ttk.Entry(self.exp, textvariable=self.removal_pw_var, show="*", width=30)
+        self.ent_removal_pw.grid(row=0, column=3, sticky="w", padx=6, pady=6)
 
-    # ---------- Sprachumschaltung ----------
+        # Buttons row
+        btns = ttk.Frame(self.exp)
+        btns.grid(row=1, column=0, columnspan=4, pady=12)
+        self.btn_preview = ttk.Button(btns, text=t("preview"), command=self.preview_mobileconfig, width=18)
+        self.btn_preview.pack(side="left", padx=10)
+        self.btn_reset = ttk.Button(btns, text=t("reset"), command=self.reset_form, width=25)
+        self.btn_reset.pack(side="left", padx=10)
+        self.btn_save = ttk.Button(btns, text=t("save"), command=self.save_mobileconfig, width=22)
+        self.btn_save.pack(side="left", padx=10)
+
+        # Footer
+        self.footer_lbl = ttk.Label(self, text=t("footer"), foreground="#555")
+        self.footer_lbl.pack(side="bottom", pady=(0, 6))
+
     def set_lang(self, lang):
         global LANG
         LANG = lang
+        # Window + header
         self.title(t("title"))
-        self.frm.config(text=t("form_title"))
+        self.title_lbl.config(text=t("title"))
+        self.lang_lbl.config(text=t("lang"))
+        # Frames
+        self.frm_input.config(text=t("section_input"))
+        self.opt.config(text=t("section_opts"))
+        self.exp.config(text=t("section_export"))
+        # Input labels/buttons
         self.lbl_ssid.config(text=t("ssid"))
-        self.lbl_pw.config(text=t("password"))
+        self.lbl_password.config(text=t("password"))
+        self.lbl_enc.config(text=t("enc"))
+        self.lbl_dns.config(text=t("dns"))
+        self.lbl_proxy_mode.config(text=t("proxy_mode"))
+        self.lbl_proxy_val.config(text=t("proxy_val"))
+        self.btn_pw_toggle.config(text=t("show_pw"))
+        # Options labels
         self.chk_autojoin.config(text=t("autojoin"))
         self.chk_hidden.config(text=t("hidden"))
         self.chk_disable_mac.config(text=t("disable_mac"))
-        self.chk_disable_priv.config(text=t("disable_privateaddr"))
-        self.lbl_enc.config(text=t("enc"))
-        self.lbl_dns.config(text=t("dns"))
-        self.lbl_proxy.config(text=t("proxy"))
-        self.lbl_proxy_val.config(text=t("proxy_val"))
-        self.btn_add.config(text=t("btn_add"))
-        self.btn_reset.config(text=t("btn_reset"))
-        self.list_frame.config(text=t("list_title"))
-        self.btn_remove.config(text=t("btn_remove"))
-        self.btn_edit.config(text=t("btn_edit"))
-        self.btn_preview.config(text=t("btn_preview"))
+        self.chk_disable_priv.config(text=t("disable_priv"))
+        # Export labels/buttons
         self.lbl_profile_name.config(text=t("profile_name"))
-        self.btn_save.config(text=t("btn_save"))
+        self.lbl_removal_pw.config(text=t("removal_pw"))
+        self.btn_preview.config(text=t("preview"))
+        self.btn_reset.config(text=t("reset"))
+        self.btn_save.config(text=t("save"))
+        # Footer
+        self.footer_lbl.config(text=t("footer"))
 
-    # ---------- Netzwerkfunktionen ----------
+    def toggle_pw(self):
+        self.ent_pw.config(show="" if self.ent_pw.cget("show") == "*" else "*")
+
     def reset_form(self):
         self.ssid_var.set("")
         self.pw_var.set("")
-        self.autojoin_var.set(False)
-        self.hidden_var.set(False)
-        self.disable_mac_var.set(False)
-        self.disable_privateaddr_var.set(False)
-        self.enc_var.set("WPA2")
         self.dns_var.set("")
-        self.proxy_type_var.set("none")
-        self.proxy_val_var.set("")
+        self.proxy_mode.set("none")
+        self.proxy_val.set("")
+        self.autojoin_var.set(True)
+        self.hidden_var.set(False)
+        self.disable_mac_var.set(True)
+        self.disable_priv_var.set(True)
+        self.enc_var.set("WPA2")
+        self.profile_name_var.set("")
+        self.removal_pw_var.set("")
 
-    def add_network(self):
-        ssid = self.ssid_var.get().strip()
-        if not ssid:
-            messagebox.showerror("Fehler", "SSID darf nicht leer sein.")
-            return
-        pw = self.pw_var.get()
-        dns = [s.strip() for s in self.dns_var.get().split(",") if s.strip()] or None
-        net = make_wifi_dict(
-            ssid=ssid,
-            password=pw,
-            auto_join=self.autojoin_var.get(),
-            hidden=self.hidden_var.get(),
-            encryption=self.enc_var.get(),
-            disable_mac_random=self.disable_mac_var.get(),
-            disable_private_addr=self.disable_privateaddr_var.get(),
-            proxy_type=self.proxy_type_var.get(),
-            proxy_url=self.proxy_val_var.get().strip(),
-            dns_servers=dns
-        )
-        self.networks.append(net)
-        self.listbox.insert("end", f"{ssid} (AutoJoin={'ja' if net['AutoJoin'] else 'nein'})")
-
-    def remove_selected(self):
-        sel = self.listbox.curselection()
-        if not sel: return
-        idx = sel[0]
-        self.listbox.delete(idx)
-        del self.networks[idx]
-
-    def edit_selected(self):
-        sel = self.listbox.curselection()
-        if not sel: return
-        idx = sel[0]
-        net = self.networks[idx]
-        self.ssid_var.set(net.get("SSID_STR", ""))
-        self.pw_var.set(net.get("Password", ""))
-        self.autojoin_var.set(net.get("AutoJoin", False))
-        self.hidden_var.set(net.get("HIDDEN_NETWORK", False))
-        self.disable_mac_var.set(net.get("DisableAssociationMACRandomization", False))
-        self.disable_privateaddr_var.set(net.get("DisablePrivateAddress", False))
-        self.enc_var.set(net.get("EncryptionType", "WPA2"))
-        self.dns_var.set(",".join(net.get("DNSServer", [])) if net.get("DNSServer") else "")
-        self.listbox.delete(idx)
-        del self.networks[idx]
+    def _dns_list(self):
+        raw = (self.dns_var.get() or "").strip()
+        return [s.strip() for s in raw.split(",") if s.strip()] or None
 
     def preview_mobileconfig(self):
-        if not self.networks:
-            messagebox.showwarning("Keine Netzwerke", "Bitte erst Netzwerke hinzufügen.")
+        ssid = self.ssid_var.get().strip()
+        if not ssid:
+            messagebox.showerror("Error", t("err_ssid_empty"))
             return
-        top = build_mobileconfig(self.networks, profile_name=self.profile_name_var.get())
-        xml = plistlib.dumps(top, fmt=plistlib.FMT_XML).decode()
+        net = make_wifi_dict(ssid, self.pw_var.get(), self.autojoin_var.get(), self.hidden_var.get(),
+                             self.enc_var.get(), self.disable_mac_var.get(), self.disable_priv_var.get(),
+                             self.proxy_mode.get(), self.proxy_val.get().strip(), self._dns_list())
+        top = build_mobileconfig(net, self.profile_name_var.get(), self.removal_pw_var.get())
+        xml = plistlib.dumps(top, fmt=plistlib.FMT_XML).decode("utf-8", "ignore")
         win = tk.Toplevel(self)
-        win.title("Vorschau")
-        txt = tk.Text(win, wrap="none", width=100, height=30)
+        win.title(t("preview_title"))
+        txt = tk.Text(win, wrap="none", width=110, height=30)
         txt.insert("1.0", xml)
         txt.pack(fill="both", expand=True)
 
     def save_mobileconfig(self):
-        if not self.networks:
-            messagebox.showwarning("Keine Netzwerke", "Bitte erst Netzwerke hinzufügen.")
+        ssid = self.ssid_var.get().strip()
+        if not ssid:
+            messagebox.showerror("Error", t("err_ssid_empty"))
             return
-        top = build_mobileconfig(self.networks, profile_name=self.profile_name_var.get())
+        net = make_wifi_dict(ssid, self.pw_var.get(), self.autojoin_var.get(), self.hidden_var.get(),
+                             self.enc_var.get(), self.disable_mac_var.get(), self.disable_priv_var.get(),
+                             self.proxy_mode.get(), self.proxy_val.get().strip(), self._dns_list())
+        top = build_mobileconfig(net, self.profile_name_var.get(), self.removal_pw_var.get())
         path = filedialog.asksaveasfilename(defaultextension=".mobileconfig",
-                                            filetypes=[("MobileConfig", "*.mobileconfig")])
+                                            filetypes=[("MobileConfig", "*.mobileconfig"), ("All files", "*.*")])
         if not path: return
-        with open(path, "wb") as f:
-            plistlib.dump(top, f)
-        messagebox.showinfo("Gespeichert", f"Datei gespeichert: {path}")
+        with open(path, "wb") as f: plistlib.dump(top, f)
+        messagebox.showinfo("OK", t("saved_prefix") + path)
 
 if __name__ == "__main__":
-    app = MobileConfigApp()
-    app.mainloop()
+    App().mainloop()
